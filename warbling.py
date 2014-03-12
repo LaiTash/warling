@@ -134,19 +134,24 @@ class WBIntLocal(WBMemoryIntSlot):
         return self.machine.script_state.int_variables[self.name]
 #endregion
 
-
 class ValueContainer(object):
-    def __init__(self, name, fields):
-        self.name = name
-        self.fields = fields
-        for field in fields:
+    def __init__(self):
+        for field in self.__class__.fields:
             setattr(self, field, None)
 
     def copy(self):
-        result = ValueContainer(self.name, self.fields)
-        for field in self.fields:
+        result = self.__class__()
+        for field in self.__class__.fields:
             setattr(result, field, getattr(self, field))
         return result
+
+class ValueContainerMeta(type):
+    def __new__(cls, name, fields):
+        #scls.__name__ = name
+        #cls.fields = fields
+        dct = dict(zip(fields, repeat(None, len(fields))))
+        dct.update({"fields": fields})
+        return type(name, (ValueContainer,), dct)
 
 
 class WBMachine(object):
@@ -163,31 +168,31 @@ class WBMachine(object):
         flt_registers - number of floating point registers
         str_registers - number of string registers
         """
-        self.global_state = ValueContainer('WBGlobalState', [
+        self.global_state = ValueContainerMeta('WBGlobalState', [
             'int_registers',
             'flt_registers',
             'str_registers',
             'scripts',
             'int_variables'
-        ])
-        self.script_state = ValueContainer('WBScriptState', [
+        ])()
+        self.script_state = ValueContainerMeta('WBScriptState', [
             'script',
             'arguments',
             'int_variables',
-        ])
-        self.execution_state = ValueContainer('WBExecutionState', [
+        ])()
+        self.execution_state = ValueContainerMeta('WBExecutionState', [
             'head',
             'opcode',
             'arguments',
             'operation'
-        ])
-        self.block_state = ValueContainer('WBLocalState', [
+        ])()
+        self.block_state = ValueContainerMeta('WBLocalState', [
             'type',
             'start_position',
             'end_position',
             'iterator',
             'sig_break',
-        ])
+        ])()
         self.init_global_state(scripts, int_registers, flt_registers, str_registers)
         self.opcodes = opcodes
 
