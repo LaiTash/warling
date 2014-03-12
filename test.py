@@ -2,9 +2,11 @@ __author__ = 'Lai Tash (lai.tash@yandex.ru)'
 from header_operations import *
 from warling_specific_ops import *
 from wboperations import opcodes
-import warbling
+import machine
 
-code1 = [
+scripts = [
+    ('main',
+     [
     (store_add, ":x", 5, 6),
     (output_int, ":x"),
     (try_begin),
@@ -22,6 +24,14 @@ code1 = [
             (end_try),
         (end_try),
     (end_try),
+     ]),
+
+    ('simple',
+    [
+    ]),
+]
+
+code1 = [
 ]
 
 code2 = [
@@ -29,8 +39,8 @@ code2 = [
 
 main_code = code1
 
-script = warbling.WBScript("main", main_code)
+#script = warbling.WBScript("main", main_code)
 
-machine = warbling.WBMachine({"main": script}, opcodes)
-machine.execute("main", [])
+machine = machine.WBMachine(scripts, opcodes)
+machine.execute_script("main", [])
 
