@@ -4,6 +4,7 @@ __author__ = 'Lai Tash (lai.tash@yandex.ru)'
 from itertools import repeat
 from collections import deque, defaultdict, namedtuple
 from abc import ABCMeta, abstractmethod
+from states import *
 
 #region constants
 OPC_ENDTRY = 3
@@ -134,26 +135,6 @@ class WBIntLocal(WBMemoryIntSlot):
         return self.machine.script_state.int_variables[self.name]
 #endregion
 
-class ValueContainer(object):
-    def __init__(self):
-        for field in self.__class__.fields:
-            setattr(self, field, None)
-
-    def copy(self):
-        result = self.__class__()
-        for field in self.__class__.fields:
-            setattr(result, field, getattr(self, field))
-        return result
-
-class ValueContainerMeta(type):
-    def __new__(cls, name, fields):
-        #scls.__name__ = name
-        #cls.fields = fields
-        dct = dict(zip(fields, repeat(None, len(fields))))
-        dct.update({"fields": fields})
-        return type(name, (ValueContainer,), dct)
-
-
 class WBMachine(object):
     machine = None
     Error = WBError
@@ -163,42 +144,29 @@ class WBMachine(object):
 
     def __init__(self, scripts, opcodes, int_registers = 99, flt_registers = 99, str_registers = 99):
         """
-        scripts - a [name, WBScript] defaultdict
+        scripts - a [(name, [code]), ...] script list
         int_registers - number of integer registers
         flt_registers - number of floating point registers
         str_registers - number of string registers
         """
-        self.global_state = ValueContainerMeta('WBGlobalState', [
-            'int_registers',
-            'flt_registers',
-            'str_registers',
-            'scripts',
-            'int_variables'
-        ])()
-        self.script_state = ValueContainerMeta('WBScriptState', [
-            'script',
-            'arguments',
-            'int_variables',
-        ])()
-        self.execution_state = ValueContainerMeta('WBExecutionState', [
-            'head',
-            'opcode',
-            'arguments',
-            'operation'
-        ])()
-        self.block_state = ValueContainerMeta('WBLocalState', [
-            'type',
-            'start_position',
-            'end_position',
-            'iterator',
-            'sig_break',
-        ])()
-        self.init_global_state(scripts, int_registers, flt_registers, str_registers)
+        self.global_state = WBGlobalState()
+        self.script_state = WBScriptState()
+        self.execution_state = WBExecutionState()
+        self.block_state = WBLocalState()
+        self.init_global_state(int_registers, flt_registers, str_registers)
+        self.init_scripts(scripts)
         self.opcodes = opcodes
 
+    def init_scripts(self, scripts):
+        self.global_state.scripts = []
+        self.global_state.script_indices = defaultdict(None)
+        for i, script in enumerate(scripts):
+            result = WBScript(script[0], script[1])
+            self.global_state.scripts.append(result)
+            self.global_state.script_indices[result.name] = i
 
-    def init_global_state(self, scripts, int_registers, flt_registers, str_registers):
-        self.global_state.scripts = scripts
+
+    def init_global_state(self, int_registers, flt_registers, str_registers):
         self.global_state.int_registers = list(repeat(0, int_registers))
         self.global_state.flt_registers = list(repeat(0.0, flt_registers))
         self.global_state.str_registers = list(repeat("", str_registers))
@@ -397,14 +365,28 @@ class WBMachine(object):
         self.block_state.sig_break = True
 
     #endregion
+    def execute_script(self, script_index_or_name, arguments = ()):
+        if type(script_index_or_name) is int:
+            self.execute_script_by_index(script_index_or_name, arguments)
+        else:
+            self.execute_script_by_name(script_index_or_name, arguments)
 
-    def execute(self, script_name, arguments):
+    def get_script_index(self, script_name):
+        result = self.global_state.script_indices[script_name]
+        if result is None:
+            self.error("No such script: %s" % script_name)
+        return result
+
+    def execute_script_by_name(self, script_name, arguments):
+        return self.execute_script_by_index(self.get_script_index(script_name), arguments)
+
+    def execute_script_by_index(self, script_index, arguments):
         old_script_state = self.script_state.copy()
         old_execution_state = self.execution_state.copy()
         old_block_state = self.block_state.copy()
-        self.script_state.script = self.global_state.scripts[script_name]
-        if self.script_state.script is None:
-            self.error("script '%s' does not exist" % script_name)
+        if script_index not in self.global_state.scripts is None:
+            self.error("script with index '%i' does not exist" % script_index)
+        self.script_state.script = self.global_state.scripts[script_index]
         self.script_state.int_variables = defaultdict(lambda: 0)
         self.block_state.start_position = 0
         self.block_state.sig_break = False
@@ -412,6 +394,9 @@ class WBMachine(object):
         self.script_state.arguments = (self.get_int(value) for value in arguments)
         self.goto(0)
         self.execute_script_code()
+        self.script_state = old_script_state
+        self.execution_state = old_execution_state
+        self.block_state = old_block_state
 
 
 
