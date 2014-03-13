@@ -46,8 +46,8 @@ def val_add(machine, destination, *operands):
 def eq(machine, value1, value2):
     value1 = machine.get_int(value1)
     value2 = machine.get_int(value2)
-    if value1 != value2:
-        machine.signal_break()
+    return value1 == value2
+
 
 #endregion
 

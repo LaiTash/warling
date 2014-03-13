@@ -343,7 +343,8 @@ class WBMachine(object):
         function = self.opcodes[self.execution_state.opcode]
         if function is None:
             self.error("opcode %i has no function" % self.execution_state.opcode)
-        apply(function, (self,) + self.execution_state.arguments)
+        if apply(function, (self,) + self.execution_state.arguments) is False:
+            self.block_state.sig_break = True
 
 
     #endregion
@@ -360,9 +361,6 @@ class WBMachine(object):
             self.execution_state.head,
             description
         )
-
-    def signal_break(self):
-        self.block_state.sig_break = True
 
     #endregion
     def execute_script(self, script_index_or_name, arguments = ()):
