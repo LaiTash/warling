@@ -184,21 +184,24 @@ class WBMachine(object):
 
     def parse_int(self, value):
         if type(value) is str:
-            if len(value) < 2:
-                self.error("incorrect value")
-            if value[0] == ":":
-                name = value[1:]
-                return WBIntLocal(self, name)
-            elif value[0] == "@":
-                name = value[1:]
-                return WBIntGlobal(self, name)
+            if len(value) >= 6:
+                if value[:7] == "script_":
+                    name = value[7:]
+                    index = self.get_script_index(name)
+                    return WBIntConstant(self, index)
+            if len(value) >= 2:
+                if value[0] == ":":
+                    name = value[1:]
+                    return WBIntLocal(self, name)
+                elif value[0] == "@":
+                    name = value[1:]
+                    return WBIntGlobal(self, name)
         elif type(value) is int:
             if value & OPMASK_REGISTER:
                 return WBIntRegister(self, value ^ OPMASK_REGISTER)
             else:
                 return WBIntConstant(self, value)
-        else:
-            self.error("incorrect value")
+        self.error("incorrect value")
     #endregion
 
     #region head manipulation
@@ -249,9 +252,6 @@ class WBMachine(object):
     #endregion
 
     #region operation execution
-    def execute_script_code(self):
-        while self.execution_state.head < len(self.code) and not self.block_state.sig_break:
-            self.next_operation()
 
     def execute_operation(self):
         opcode = self.execution_state.opcode
@@ -402,12 +402,14 @@ class WBMachine(object):
         self.block_state.start_position = 0
         self.block_state.sig_break = False
         self.block_state.type = BT_SCRIPT
-        self.script_state.arguments = (self.get_int(value) for value in arguments)
+        self.script_state.arguments = tuple(self.get_int(value) for value in arguments)
         self.goto(0)
-        self.execute_script_code()
+        while self.execution_state.head < len(self.code) and not self.block_state.sig_break:
+            self.next_operation()
+        sig_break = self.block_state.sig_break
         self.script_state = old_script_state
         self.execution_state = old_execution_state
         self.block_state = old_block_state
-
+        return not sig_break
 
 
