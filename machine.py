@@ -6,37 +6,12 @@ from collections import deque, defaultdict, namedtuple
 from abc import ABCMeta, abstractmethod
 from states import *
 
-#region constants
-MOD_NEG = 0x80000000
-MOD_THIS_OR_NEXT = 0x40000000
-MOD_ALL = MOD_NEG | MOD_THIS_OR_NEXT
-
-OPC_ENDTRY = 3
-OPC_TRYBEGIN = 4
-OPC_ELSETRY = 5
-OPC_TRYFORRANGE = 6
-OPC_TRYFORRANGE_BACK = 7
-OPC_BLOCK = (OPC_TRYBEGIN, OPC_TRYFORRANGE, OPC_TRYFORRANGE_BACK)
-
-TAG_REGISTER = 1
-OP_NUM_VALUE_BITS = 56
-OPMASK_REGISTER = TAG_REGISTER << OP_NUM_VALUE_BITS
-
-OTYPE_PLAIN = 0
-OTYPE_INT_REG = 1
-
-BT_PLAIN = 0
-BT_TRY = 1
-BT_TRYFORWARD = 2
-BT_TRYBACK = 3
-BT_SCRIPT  = 4
-BT_HAS_ENDTRY = (BT_TRY, BT_TRYBACK, BT_TRYFORWARD)
-#endregion
 
 class WBScript(object):
     """
     The simple script code container
     """
+    __slots__ = ("name", "code")
     def __init__(self, name, code):
         """
         name - a script name
@@ -332,7 +307,7 @@ class WBMachine(object):
         self.block_state.iterator.set(try_from)
         #while (self.block_state.iterator.get() < try_to) if forward else (self.block_state.iterator.get() > try_to):
         ttd = try_to * direction
-        while (self.block_state.iterator.get() * direction < ttd): # i liek it this way!
+        while self.block_state.iterator.get() * direction < ttd: # i liek it this way!
             self.block_state.sig_break = False
             self.goto(self.block_state.start_position + 1)
             self.block_state.iterator.add(direction)
