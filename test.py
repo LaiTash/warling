@@ -1,7 +1,6 @@
 __author__ = 'Lai Tash (lai.tash@yandex.ru)'
 from header_operations import *
 from warling_specific_ops import *
-from wboperations import opcodes
 import machine
 
 scripts = [
@@ -30,17 +29,4 @@ scripts = [
     [
     ]),
 ]
-
-code1 = [
-]
-
-code2 = [
-]
-
-main_code = code1
-
-#script = warbling.WBScript("main", main_code)
-
-machine = machine.WBMachine(scripts, opcodes)
-machine.execute_script("main", [])
 
