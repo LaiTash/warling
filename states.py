@@ -41,7 +41,8 @@ WBExecutionState = ValueContainerMeta('WBExecutionState', [
             'head',
             'opcode',
             'arguments',
-            'operation'
+            'operation',
+            'modifiers',
         ])
 
 WBLocalState = ValueContainerMeta('WBLocalState', [

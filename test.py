@@ -6,10 +6,20 @@ import machine
 scripts = [
     ('main',
      [
+         (this_or_next|eq, 5, 6),
+         (this_or_next|eq, 12,8),
+         (neg|this_or_next|eq, 3, 2),
+         (display_message, "shouldn't show up"),
+         (display_message, "should show up"),
+     ]
+    ),
+
+    ('old',
+     [
     (store_add, ":x", 5, 6),
     (output_int, ":x"),
     (try_begin),
-        (eq, 5,6),
+        (neg|eq, 5,6),
         (display_message, "ok"),
     (else_try),
         (try_for_range_backwards, ":x", 5, 0),

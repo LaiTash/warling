@@ -7,6 +7,10 @@ from abc import ABCMeta, abstractmethod
 from states import *
 
 #region constants
+MOD_NEG = 0x80000000
+MOD_THIS_OR_NEXT = 0x40000000
+MOD_ALL = MOD_NEG | MOD_THIS_OR_NEXT
+
 OPC_ENDTRY = 3
 OPC_TRYBEGIN = 4
 OPC_ELSETRY = 5
@@ -206,12 +210,15 @@ class WBMachine(object):
             else:
                 return
         self.execution_state.operation = self.code[self.execution_state.head]
-        if type(self.execution_state.operation) is int:
-            self.execution_state.opcode = self.execution_state.operation
+        opcode = self.execution_state.operation
+        if type(opcode) is int:
             self.execution_state.arguments = tuple()
         else:
-            self.execution_state.opcode = self.execution_state.operation[0]
-            self.execution_state.arguments = self.execution_state.operation[1:]
+            self.execution_state.arguments = opcode[1:]
+            opcode = opcode[0]
+        self.execution_state.modifiers = opcode & MOD_ALL
+        self.execution_state.opcode = (opcode | MOD_ALL) ^ MOD_ALL
+
 
     def head_forward(self):
         self.goto(self.execution_state.head + 1)
@@ -343,8 +350,14 @@ class WBMachine(object):
         function = self.opcodes[self.execution_state.opcode]
         if function is None:
             self.error("opcode %i has no function" % self.execution_state.opcode)
-        if apply(function, (self,) + self.execution_state.arguments) is False:
-            self.block_state.sig_break = True
+        if apply(function, (self,) + self.execution_state.arguments) is False and not self.execution_state.modifiers & MOD_NEG:
+            if not (self.execution_state.modifiers & MOD_THIS_OR_NEXT):
+                self.block_state.sig_break = True
+        elif self.execution_state.modifiers & MOD_THIS_OR_NEXT:
+            self.head_forward()
+
+
+
 
 
     #endregion
